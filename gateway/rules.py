@@ -1,5 +1,6 @@
 import json
 import re
+from datetime import datetime, timezone
 
 from gateway.models import RequestInspection, RuleMatch
 
@@ -125,8 +126,83 @@ def has_suspicious_headers(inspection: RequestInspection) -> list[str]:
     return suspicious
 
 
-def evaluate_rules(inspection: RequestInspection) -> list[RuleMatch]:
-    matches = []
+def parse_event_timestamp(timestamp: str | None) -> datetime | None:
+    if not timestamp:
+        return None
+
+    try:
+        if timestamp.endswith("Z"):
+            timestamp = timestamp.replace("Z", "+00:00")
+        return datetime.fromisoformat(timestamp)
+    except ValueError:
+        return None
+
+
+def evaluate_history_rules(
+    inspection: RequestInspection,
+    history: list[dict],
+) -> list[RuleMatch]:
+    matches: list[RuleMatch] = []
+
+    now = datetime.now(timezone.utc)
+
+    recent_flagged_or_blocked = [
+        event
+        for event in history
+        if event.get("decision") in {"flag", "block"}
+    ]
+
+    if len(recent_flagged_or_blocked) >= 3:
+        matches.append(
+            RuleMatch(
+                rule="repeated_suspicious_behavior",
+                reason="Client has 3 or more recent flagged or blocked requests.",
+                score=40,
+            )
+        )
+
+    recent_sensitive_hits = [
+        event
+        for event in history
+        if event.get("is_sensitive_endpoint") is True
+    ]
+
+    if inspection.is_sensitive_endpoint and len(recent_sensitive_hits) >= 5:
+        matches.append(
+            RuleMatch(
+                rule="repeated_sensitive_endpoint_access",
+                reason="Client has repeatedly accessed sensitive endpoints recently.",
+                score=20,
+            )
+        )
+
+    recent_burst_count = 0
+    for event in history:
+        event_time = parse_event_timestamp(event.get("timestamp"))
+        if event_time is None:
+            continue
+
+        age_seconds = (now - event_time).total_seconds()
+        if 0 <= age_seconds <= 60:
+            recent_burst_count += 1
+
+    if recent_burst_count >= 8:
+        matches.append(
+            RuleMatch(
+                rule="rapid_request_burst",
+                reason="Client sent many requests within the last 60 seconds.",
+                score=25,
+            )
+        )
+
+    return matches
+
+
+def evaluate_rules(
+    inspection: RequestInspection,
+    history: list[dict] | None = None,
+) -> list[RuleMatch]:
+    matches: list[RuleMatch] = []
 
     if inspection.is_sensitive_endpoint and not inspection.has_auth_header:
         matches.append(
@@ -203,6 +279,9 @@ def evaluate_rules(inspection: RequestInspection) -> list[RuleMatch]:
                 score=20,
             )
         )
+
+    if history:
+        matches.extend(evaluate_history_rules(inspection, history))
 
     return matches
 

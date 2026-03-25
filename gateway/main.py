@@ -8,11 +8,6 @@ import json
 import uuid
 from datetime import datetime, timezone
 
-STATIC_DIR = Path(__file__).resolve().parent / "static"
-
-app = FastAPI(title="GateShield Gateway")
-app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
-
 from gateway.models import (
     RequestInspection,
     RuleMatch,
@@ -31,9 +26,13 @@ from gateway.database.db import (
     save_security_event,
     get_all_events,
     get_event_summary,
+    delete_events_by_client,  # assuming you already added this
 )
 
+STATIC_DIR = Path(__file__).resolve().parent / "static"
+
 app = FastAPI(title="GateShield Gateway")
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 PROTECTED_API_BASE = "http://127.0.0.1:8001"
 
@@ -91,6 +90,54 @@ def log_security_event(event: SecurityEvent) -> None:
     print(event.model_dump_json(indent=2))
 
 
+def get_recent_history_for_client(
+    client_host: str | None,
+    limit: int = 100,
+) -> list[dict]:
+    if not client_host:
+        return []
+
+    recent_events = get_all_events(limit=limit)
+    return [event for event in recent_events if event.get("client_host") == client_host]
+
+
+def compute_live_client_risk(history: list[dict]) -> dict:
+    """
+    Computes a live risk score from recent client history.
+    This is intentionally separate from per-request scoring.
+    """
+    flagged_count = sum(1 for event in history if event.get("decision") == "flag")
+    blocked_count = sum(1 for event in history if event.get("decision") == "block")
+    sensitive_count = sum(
+        1 for event in history if event.get("is_sensitive_endpoint") is True
+    )
+
+    # Risk model for demo purposes
+    risk_score = (
+        flagged_count * 15
+        + blocked_count * 30
+        + min(sensitive_count * 5, 20)
+    )
+
+    if risk_score >= 90:
+        risk_level = "critical"
+    elif risk_score >= 60:
+        risk_level = "high"
+    elif risk_score >= 30:
+        risk_level = "elevated"
+    else:
+        risk_level = "low"
+
+    return {
+        "risk_score": risk_score,
+        "risk_level": risk_level,
+        "recent_event_count": len(history),
+        "flagged_count": flagged_count,
+        "blocked_count": blocked_count,
+        "sensitive_count": sensitive_count,
+    }
+
+
 @app.get("/health")
 def health():
     return {"status": "ok", "service": "gateway"}
@@ -115,6 +162,30 @@ def list_events(
         "events": get_all_events(decision=decision, path=path, limit=limit),
     }
 
+
+@app.get("/risk/me")
+def get_my_risk(request: Request):
+    client_host = request.client.host if request.client else None
+    history = get_recent_history_for_client(client_host=client_host, limit=100)
+    risk = compute_live_client_risk(history)
+
+    return {
+        "client_host": client_host,
+        **risk,
+    }
+
+
+@app.delete("/events/reset/me")
+def reset_my_events(request: Request):
+    client_host = request.client.host if request.client else None
+    deleted_count = delete_events_by_client(client_host) if client_host else 0
+
+    return {
+        "message": f"Cleared events for {client_host}",
+        "deleted_count": deleted_count,
+    }
+
+
 @app.get("/", response_class=HTMLResponse)
 def dashboard():
     return (STATIC_DIR / "index.html").read_text(encoding="utf-8")
@@ -126,7 +197,13 @@ async def proxy(path: str, request: Request):
     body = await request.body()
 
     inspection = await inspect_request(request, path, body)
-    rule_matches = evaluate_rules(inspection)
+
+    recent_history = get_recent_history_for_client(
+        client_host=inspection.client_host,
+        limit=100,
+    )
+
+    rule_matches = evaluate_rules(inspection, history=recent_history)
     risk_score = compute_risk_score(rule_matches)
     decision = decide_action(risk_score)
 

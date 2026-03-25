@@ -199,6 +199,17 @@ def get_event_summary(
 
     return summary
 
+def delete_events_by_client(client_host: str):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute(
+        "DELETE FROM security_events WHERE client_host = ?",
+        (client_host,)
+    )
+
+    conn.commit()
+    conn.close()
 
 def clear_events() -> None:
     with get_connection() as conn:

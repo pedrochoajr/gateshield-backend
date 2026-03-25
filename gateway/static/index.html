@@ -349,8 +349,80 @@
     <h1>GateShield Dashboard</h1>
     <div class="subtitle">Live view of gateway decisions, recent traffic, and interactive request testing.</div>
 
+    <div class="panel" style="margin-top:20px;">
+      <div class="panel-title" style="margin-bottom:10px;">About GateShield</div>
+
+      <p class="muted" style="margin-bottom:10px;">
+        GateShield is a prototype API security gateway designed to inspect incoming requests,
+        apply rule-based threat detection, and assign a risk score to determine whether a request
+        should be allowed, flagged, or blocked.
+      </p>
+
+      <p class="muted" style="margin-bottom:10px;">
+        Each request is analyzed for common attack patterns such as SQL injection, cross-site scripting (XSS),
+        path traversal, oversized payloads, suspicious headers, and missing authentication on sensitive endpoints.
+        These signals contribute to a cumulative per-request risk score.
+      </p>
+
+      <p class="muted">
+        GateShield also tracks recent request history per client. If a client repeatedly triggers suspicious
+        behavior, their live risk increases over time. Once the accumulated risk and recent behavior cross
+        defined thresholds, the system escalates from allowing requests, to flagging them, and eventually
+        blocking subsequent requests.
+      </p>
+
+      <p class="muted" style="margin-top:10px;">
+        Use the <strong>Request Tester</strong> to simulate safe and malicious requests, observe matched rules,
+        and see how repeated suspicious activity results in stricter enforcement.
+      </p>
+
+      <p class="muted" style="margin-top:10px; color:#ff8d8d;">
+        ⚠️ Repeated suspicious requests can raise your live risk level and cause future requests to be blocked.
+      </p>
+    </div>
+
     <div class="panel">
-      <h2>Request Tester</h2>
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">Current Client Risk</div>
+          <div class="expand-hint">Live risk based on your recent request history.</div>
+        </div>
+      </div>
+
+      <div class="cards" style="margin-bottom:0;">
+        <div class="card">
+          <div class="card-label">Risk Level</div>
+          <div id="liveRiskLevel" class="card-value">—</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Risk Score</div>
+          <div id="liveRiskScore" class="card-value">0</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Recent Flagged</div>
+          <div id="liveFlaggedCount" class="card-value">0</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Recent Blocked</div>
+          <div id="liveBlockedCount" class="card-value">0</div>
+        </div>
+      </div>
+
+      <div class="response-box" style="margin-top:14px;">
+        <div class="panel-title" style="margin-bottom:10px;">Live Risk Details</div>
+        <div id="liveRiskMeta" class="muted">Loading...</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <h2 style="margin:0;">Request Tester</h2>
+        <div style="display:flex; justify-content:flex-end;">
+          <button id="resetBtn" class="button" style="background:#e53e3e; width:auto;">
+            Reset My History
+          </button>
+        </div>
+      </div>
 
       <div class="tester-grid">
         <select id="methodInput" class="select">
@@ -405,7 +477,7 @@
           <div class="preset-title">Path Traversal</div>
           <div class="muted">Body contains ../../etc/passwd</div>
         </button>
-        
+
         <button class="preset-btn" data-preset="xss-comment">
           <div class="preset-title">XSS Payload</div>
           <div class="muted">Body contains a script tag</div>
@@ -502,6 +574,13 @@
     const testerStatus = document.getElementById("testerStatus");
     const testerResponse = document.getElementById("testerResponse");
     const jsonContentTypeCheckbox = document.getElementById("jsonContentTypeCheckbox");
+    const resetBtn = document.getElementById("resetBtn");
+
+    const liveRiskLevel = document.getElementById("liveRiskLevel");
+    const liveRiskScore = document.getElementById("liveRiskScore");
+    const liveFlaggedCount = document.getElementById("liveFlaggedCount");
+    const liveBlockedCount = document.getElementById("liveBlockedCount");
+    const liveRiskMeta = document.getElementById("liveRiskMeta");
 
     const presetButtons = document.querySelectorAll("[data-preset]");
 
@@ -621,6 +700,39 @@
       return params.toString();
     }
 
+    function getRiskDisplay(level) {
+      if (level === "critical") return { label: "Critical", color: "#ff8d8d" };
+      if (level === "high") return { label: "High", color: "#ffb366" };
+      if (level === "elevated") return { label: "Elevated", color: "#ffd36a" };
+      return { label: "Low", color: "#78e0a8" };
+    }
+
+    async function loadLiveRisk() {
+      try {
+        const response = await fetch("/risk/me");
+        const data = await response.json();
+
+        const riskDisplay = getRiskDisplay(data.risk_level);
+
+        liveRiskLevel.textContent = riskDisplay.label;
+        liveRiskLevel.style.color = riskDisplay.color;
+        liveRiskScore.textContent = data.risk_score ?? 0;
+        liveFlaggedCount.textContent = data.flagged_count ?? 0;
+        liveBlockedCount.textContent = data.blocked_count ?? 0;
+
+        liveRiskMeta.textContent =
+          `Client: ${data.client_host || "unknown"} • ` +
+          `Recent events: ${data.recent_event_count ?? 0} • ` +
+          `Sensitive endpoint hits: ${data.sensitive_count ?? 0}`;
+      } catch (error) {
+        liveRiskLevel.textContent = "—";
+        liveRiskScore.textContent = "0";
+        liveFlaggedCount.textContent = "0";
+        liveBlockedCount.textContent = "0";
+        liveRiskMeta.textContent = "Unable to load live risk.";
+      }
+    }
+
     async function loadEvents() {
       const query = buildQuery();
       const response = await fetch(`/events?${query}`);
@@ -708,9 +820,35 @@
         }
 
         await loadEvents();
+        await loadLiveRisk();
       } catch (error) {
         testerStatus.textContent = "Request failed";
         testerResponse.textContent = String(error);
+      }
+    }
+
+    async function resetMyHistory() {
+      try {
+        resetBtn.textContent = "Resetting...";
+
+        await fetch("/events/reset/me", {
+          method: "DELETE"
+        });
+
+        await loadEvents();
+        await loadLiveRisk();
+
+        resetBtn.textContent = "Reset Complete";
+
+        setTimeout(() => {
+          resetBtn.textContent = "Reset My History";
+        }, 1200);
+      } catch (error) {
+        resetBtn.textContent = "Reset Failed";
+
+        setTimeout(() => {
+          resetBtn.textContent = "Reset My History";
+        }, 1200);
       }
     }
 
@@ -772,13 +910,21 @@
       }
     }
 
-    refreshBtn.addEventListener("click", loadEvents);
+    refreshBtn.addEventListener("click", async () => {
+      await loadEvents();
+      await loadLiveRisk();
+    });
+
     decisionFilter.addEventListener("change", loadEvents);
-    pathFilter.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") loadEvents();
+    pathFilter.addEventListener("keydown", async (e) => {
+      if (e.key === "Enter") {
+        await loadEvents();
+        await loadLiveRisk();
+      }
     });
 
     sendBtn.addEventListener("click", sendTestRequest);
+    resetBtn.addEventListener("click", resetMyHistory);
 
     presetButtons.forEach(btn => {
       btn.addEventListener("click", () => {
@@ -787,6 +933,7 @@
     });
 
     loadEvents();
+    loadLiveRisk();
   </script>
 </body>
 </html>
