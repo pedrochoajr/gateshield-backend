@@ -1,8 +1,17 @@
-from fastapi import FastAPI, Request, Response
+from pathlib import Path
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+
+from fastapi import FastAPI, Request, Response, Query
 import httpx
 import json
 import uuid
 from datetime import datetime, timezone
+
+STATIC_DIR = Path(__file__).resolve().parent / "static"
+
+app = FastAPI(title="GateShield Gateway")
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 from gateway.models import (
     RequestInspection,
@@ -17,11 +26,18 @@ from gateway.rules import (
     compute_risk_score,
     decide_action,
 )
+from gateway.database.db import (
+    init_db,
+    save_security_event,
+    get_all_events,
+    get_event_summary,
+)
 
 app = FastAPI(title="GateShield Gateway")
 
 PROTECTED_API_BASE = "http://127.0.0.1:8001"
-EVENT_STORE = []
+
+init_db()
 
 
 async def inspect_request(request: Request, path: str, body: bytes) -> RequestInspection:
@@ -68,7 +84,7 @@ def build_security_event(
 
 
 def log_security_event(event: SecurityEvent) -> None:
-    EVENT_STORE.append(event)
+    save_security_event(event)
 
     print("\n=== GateShield Security Event ===")
     print(event.model_dump_json(indent=2))
@@ -79,12 +95,28 @@ def health():
     return {"status": "ok", "service": "gateway"}
 
 
+@app.get("/events/summary")
+def events_summary(
+    decision: str | None = Query(default=None),
+    path: str | None = Query(default=None),
+):
+    return get_event_summary(decision=decision, path=path)
+
+
 @app.get("/events")
-def list_events():
+def list_events(
+    decision: str | None = Query(default=None),
+    path: str | None = Query(default=None),
+    limit: int = Query(default=50, ge=1, le=500),
+):
     return {
-        "count": len(EVENT_STORE),
-        "events": [event.model_dump() for event in EVENT_STORE],
+        "summary": get_event_summary(decision=decision, path=path),
+        "events": get_all_events(decision=decision, path=path, limit=limit),
     }
+
+@app.get("/", response_class=HTMLResponse)
+def dashboard():
+    return (STATIC_DIR / "index.html").read_text(encoding="utf-8")
 
 
 @app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])

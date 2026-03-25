@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GateShield Dashboard</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --panel: #121933;
+      --panel-2: #1a2347;
+      --text: #e8ecff;
+      --muted: #a7b0d6;
+      --border: #2a3568;
+      --allow: #1f9d55;
+      --flag: #d69e2e;
+      --block: #e53e3e;
+      --accent: #5b8cff;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: linear-gradient(180deg, #09101f 0%, #0d1430 100%);
+      color: var(--text);
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 32px 20px 48px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 2rem;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      margin-bottom: 28px;
+    }
+
+    .filters {
+      display: grid;
+      grid-template-columns: 1fr 1fr auto;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .input, .select, .button {
+      width: 100%;
+      border: 1px solid var(--border);
+      background: var(--panel);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-size: 0.95rem;
+    }
+
+    .button {
+      cursor: pointer;
+      background: var(--accent);
+      border: none;
+      font-weight: 600;
+    }
+
+    .button:hover {
+      opacity: 0.92;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+
+    .card {
+      background: rgba(18, 25, 51, 0.9);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+    }
+
+    .card-label {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-bottom: 8px;
+    }
+
+    .card-value {
+      font-size: 2rem;
+      font-weight: 700;
+    }
+
+    .card.allow .card-value { color: var(--allow); }
+    .card.flag .card-value { color: var(--flag); }
+    .card.block .card-value { color: var(--block); }
+
+    .panel {
+      background: rgba(18, 25, 51, 0.9);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .panel-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 900px;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 12px 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      vertical-align: top;
+      font-size: 0.95rem;
+    }
+
+    th {
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .badge.allow {
+      background: rgba(31, 157, 85, 0.15);
+      color: #78e0a8;
+    }
+
+    .badge.flag {
+      background: rgba(214, 158, 46, 0.15);
+      color: #ffd36a;
+    }
+
+    .badge.block {
+      background: rgba(229, 62, 62, 0.15);
+      color: #ff8d8d;
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    .code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.88rem;
+      word-break: break-word;
+    }
+
+    .empty {
+      color: var(--muted);
+      padding: 24px 0 10px;
+    }
+
+    @media (max-width: 900px) {
+      .cards {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .filters {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 540px) {
+      .cards {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>GateShield Dashboard</h1>
+    <div class="subtitle">Live view of gateway decisions and recent traffic.</div>
+
+    <div class="filters">
+      <select id="decisionFilter" class="select">
+        <option value="">All decisions</option>
+        <option value="allow">Allow</option>
+        <option value="flag">Flag</option>
+        <option value="block">Block</option>
+      </select>
+
+      <input id="pathFilter" class="input" type="text" placeholder="Filter by path, e.g. /login" />
+
+      <button id="refreshBtn" class="button">Refresh</button>
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <div class="card-label">Total Events</div>
+        <div id="totalCount" class="card-value">0</div>
+      </div>
+      <div class="card allow">
+        <div class="card-label">Allowed</div>
+        <div id="allowCount" class="card-value">0</div>
+      </div>
+      <div class="card flag">
+        <div class="card-label">Flagged</div>
+        <div id="flagCount" class="card-value">0</div>
+      </div>
+      <div class="card block">
+        <div class="card-label">Blocked</div>
+        <div id="blockCount" class="card-value">0</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">Recent Events</div>
+        <div class="muted" id="resultsMeta">Loading...</div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Decision</th>
+              <th>Path</th>
+              <th>Method</th>
+              <th>Risk</th>
+              <th>Rules</th>
+            </tr>
+          </thead>
+          <tbody id="eventsTableBody"></tbody>
+        </table>
+      </div>
+
+      <div id="emptyState" class="empty" style="display:none;">
+        No events found for the current filters.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const totalCount = document.getElementById("totalCount");
+    const allowCount = document.getElementById("allowCount");
+    const flagCount = document.getElementById("flagCount");
+    const blockCount = document.getElementById("blockCount");
+    const tableBody = document.getElementById("eventsTableBody");
+    const emptyState = document.getElementById("emptyState");
+    const resultsMeta = document.getElementById("resultsMeta");
+    const decisionFilter = document.getElementById("decisionFilter");
+    const pathFilter = document.getElementById("pathFilter");
+    const refreshBtn = document.getElementById("refreshBtn");
+
+    function badgeClass(decision) {
+      return `badge ${decision}`;
+    }
+
+    function formatRules(ruleMatches) {
+      if (!ruleMatches || ruleMatches.length === 0) return "—";
+      return ruleMatches.map(r => r.rule).join(", ");
+    }
+
+    function formatTime(timestamp) {
+      try {
+        return new Date(timestamp).toLocaleString();
+      } catch {
+        return timestamp;
+      }
+    }
+
+    function buildQuery() {
+      const params = new URLSearchParams();
+      const decision = decisionFilter.value.trim();
+      const path = pathFilter.value.trim();
+
+      if (decision) params.set("decision", decision);
+      if (path) params.set("path", path);
+      params.set("limit", "25");
+
+      return params.toString();
+    }
+
+    async function loadEvents() {
+      const query = buildQuery();
+      const url = `/events?${query}`;
+
+      const response = await fetch(url);
+      const data = await response.json();
+
+      totalCount.textContent = data.summary.total ?? 0;
+      allowCount.textContent = data.summary.allow ?? 0;
+      flagCount.textContent = data.summary.flag ?? 0;
+      blockCount.textContent = data.summary.block ?? 0;
+
+      tableBody.innerHTML = "";
+
+      if (!data.events || data.events.length === 0) {
+        emptyState.style.display = "block";
+        resultsMeta.textContent = "0 results";
+        return;
+      }
+
+      emptyState.style.display = "none";
+      resultsMeta.textContent = `${data.events.length} result${data.events.length === 1 ? "" : "s"}`;
+
+      for (const event of data.events) {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td class="muted">${formatTime(event.timestamp)}</td>
+          <td><span class="${badgeClass(event.decision)}">${event.decision}</span></td>
+          <td class="code">${event.path}</td>
+          <td>${event.method}</td>
+          <td>${event.risk_score}</td>
+          <td class="code">${formatRules(event.rule_matches)}</td>
+        `;
+        tableBody.appendChild(tr);
+      }
+    }
+
+    refreshBtn.addEventListener("click", loadEvents);
+    decisionFilter.addEventListener("change", loadEvents);
+    pathFilter.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") loadEvents();
+    });
+
+    loadEvents();
+  </script>
+</body>
+</html>
