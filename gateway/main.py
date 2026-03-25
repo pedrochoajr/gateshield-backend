@@ -41,13 +41,14 @@ init_db()
 
 
 async def inspect_request(request: Request, path: str, body: bytes) -> RequestInspection:
-    headers = dict(request.headers)
+    headers = {k.lower(): v for k, v in request.headers.items()}
     parsed_json = try_parse_json(body)
 
     return RequestInspection(
         method=request.method,
         path=f"/{path}",
         query_params=dict(request.query_params),
+        headers=headers,
         has_auth_header="authorization" in headers,
         content_type=headers.get("content-type"),
         body_size=len(body),

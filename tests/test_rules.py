@@ -3,7 +3,11 @@ from gateway.rules import (
     is_sensitive_path,
     try_parse_json,
     contains_suspicious_sql_pattern,
+    contains_path_traversal_pattern,
+    contains_xss_pattern,
     json_contains_suspicious_pattern,
+    json_contains_path_traversal,
+    json_contains_xss,
     evaluate_rules,
     compute_risk_score,
     decide_action,
@@ -15,17 +19,19 @@ def make_inspection(
     method: str = "POST",
     path: str = "/login",
     query_params: dict | None = None,
+    headers: dict | None = None,
     has_auth_header: bool = False,
     content_type: str | None = "application/json",
     body_size: int = 0,
     parsed_json=None,
     is_sensitive_endpoint: bool = True,
-    client_host: str | None = "127.0.0.1"
+    client_host: str | None = "127.0.0.1",
 ) -> RequestInspection:
     return RequestInspection(
         method=method,
         path=path,
         query_params=query_params or {},
+        headers=headers or {},
         has_auth_header=has_auth_header,
         content_type=content_type,
         body_size=body_size,
@@ -34,6 +40,90 @@ def make_inspection(
         client_host=client_host,
     )
 
+def test_contains_path_traversal_pattern_detects_attack_string():
+    assert contains_path_traversal_pattern("../../etc/passwd") is True
+    assert contains_path_traversal_pattern("..\\..\\boot.ini") is True
+
+
+def test_contains_path_traversal_pattern_ignores_normal_string():
+    assert contains_path_traversal_pattern("/products/123") is False
+
+
+def test_contains_xss_pattern_detects_script_tag():
+    assert contains_xss_pattern('<script>alert("xss")</script>') is True
+    assert contains_xss_pattern('<img src=x onerror=alert(1)>') is True
+
+
+def test_contains_xss_pattern_ignores_normal_string():
+    assert contains_xss_pattern("hello world") is False
+
+
+def test_json_contains_path_traversal_detects_nested_value():
+    payload = {"file": {"path": "../../etc/passwd"}}
+    assert json_contains_path_traversal(payload) is True
+
+
+def test_json_contains_xss_detects_nested_value():
+    payload = {"comment": {"body": '<script>alert("xss")</script>'}}
+    assert json_contains_xss(payload) is True
+
+
+def test_evaluate_rules_flags_path_traversal_in_path():
+    inspection = make_inspection(
+        path="/../../etc/passwd",
+        has_auth_header=True,
+        is_sensitive_endpoint=False,
+        body_size=0,
+        parsed_json=None,
+        content_type=None,
+    )
+
+    matches = evaluate_rules(inspection)
+
+    assert any(match.rule == "path_traversal_path" for match in matches)
+
+
+def test_evaluate_rules_flags_path_traversal_in_body():
+    inspection = make_inspection(
+        path="/download",
+        has_auth_header=True,
+        is_sensitive_endpoint=False,
+        body_size=40,
+        parsed_json={"file": "../../etc/passwd"},
+    )
+
+    matches = evaluate_rules(inspection)
+
+    assert any(match.rule == "path_traversal_body" for match in matches)
+
+
+def test_evaluate_rules_flags_xss_in_body():
+    inspection = make_inspection(
+        path="/comment",
+        has_auth_header=True,
+        is_sensitive_endpoint=False,
+        body_size=50,
+        parsed_json={"comment": '<script>alert("xss")</script>'},
+    )
+
+    matches = evaluate_rules(inspection)
+
+    assert any(match.rule == "xss_body" for match in matches)
+
+
+def test_evaluate_rules_flags_suspicious_headers():
+    inspection = make_inspection(
+        path="/search",
+        has_auth_header=True,
+        is_sensitive_endpoint=False,
+        body_size=10,
+        parsed_json={"query": "laptop"},
+        headers={"x-forwarded-host": "evil.example.com"},
+    )
+
+    matches = evaluate_rules(inspection)
+
+    assert any(match.rule == "suspicious_headers" for match in matches)
 
 def test_is_sensitive_path_true_for_known_sensitive_path():
     assert is_sensitive_path("login") is True

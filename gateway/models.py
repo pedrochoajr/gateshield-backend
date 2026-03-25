@@ -12,6 +12,7 @@ class RequestInspection(BaseModel):
     parsed_json: Any
     is_sensitive_endpoint: bool
     client_host: str | None
+    headers: dict[str, str]
 
 
 class RuleMatch(BaseModel):

@@ -9,6 +9,7 @@
       --bg: #0b1020;
       --panel: #121933;
       --panel-2: #1a2347;
+      --panel-3: #0d1430;
       --text: #e8ecff;
       --muted: #a7b0d6;
       --border: #2a3568;
@@ -38,19 +39,30 @@
       font-size: 2rem;
     }
 
+    h2 {
+      margin: 0 0 14px;
+      font-size: 1.1rem;
+    }
+
     .subtitle {
       color: var(--muted);
       margin-bottom: 28px;
     }
 
-    .filters {
+    .filters,
+    .tester-grid {
       display: grid;
       grid-template-columns: 1fr 1fr auto;
       gap: 12px;
       margin-bottom: 24px;
     }
 
-    .input, .select, .button {
+    .tester-grid {
+      grid-template-columns: 140px 1fr 1fr;
+      align-items: start;
+    }
+
+    .input, .select, .button, .textarea {
       width: 100%;
       border: 1px solid var(--border);
       background: var(--panel);
@@ -58,6 +70,13 @@
       border-radius: 12px;
       padding: 12px 14px;
       font-size: 0.95rem;
+    }
+
+    .textarea {
+      min-height: 180px;
+      resize: vertical;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      line-height: 1.5;
     }
 
     .button {
@@ -78,12 +97,16 @@
       margin-bottom: 24px;
     }
 
-    .card {
+    .card, .panel {
       background: rgba(18, 25, 51, 0.9);
       border: 1px solid var(--border);
       border-radius: 18px;
       padding: 18px;
       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+    }
+
+    .panel {
+      margin-bottom: 24px;
     }
 
     .card-label {
@@ -100,14 +123,6 @@
     .card.allow .card-value { color: var(--allow); }
     .card.flag .card-value { color: var(--flag); }
     .card.block .card-value { color: var(--block); }
-
-    .panel {
-      background: rgba(18, 25, 51, 0.9);
-      border: 1px solid var(--border);
-      border-radius: 18px;
-      padding: 18px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
-    }
 
     .panel-header {
       display: flex;
@@ -144,6 +159,55 @@
       font-weight: 600;
     }
 
+    .clickable-row {
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+
+    .clickable-row:hover {
+      background: rgba(255,255,255,0.03);
+    }
+
+    .detail-row td {
+      background: rgba(9, 16, 31, 0.65);
+      padding: 0;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .detail-panel {
+      padding: 18px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .detail-block {
+      background: var(--panel-3);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+    }
+
+    .detail-title {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--muted);
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .detail-meta {
+      display: grid;
+      grid-template-columns: 160px 1fr;
+      gap: 8px 12px;
+      font-size: 0.92rem;
+    }
+
+    .detail-meta-label {
+      color: var(--muted);
+    }
+
     .badge {
       display: inline-block;
       padding: 5px 10px;
@@ -177,6 +241,7 @@
       font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
       font-size: 0.88rem;
       word-break: break-word;
+      white-space: pre-wrap;
     }
 
     .empty {
@@ -184,12 +249,90 @@
       padding: 24px 0 10px;
     }
 
+    .preset-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .preset-btn {
+      text-align: left;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 14px;
+      padding: 12px;
+      cursor: pointer;
+    }
+
+    .preset-btn:hover {
+      border-color: var(--accent);
+    }
+
+    .preset-title {
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .response-box {
+      margin-top: 14px;
+      background: #0d1430;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+    }
+
+    .rule-list {
+      margin: 0;
+      padding-left: 18px;
+    }
+
+    .rule-list li {
+      margin-bottom: 10px;
+    }
+
+    .rule-name {
+      font-weight: 700;
+    }
+
+    .inline-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+      color: var(--muted);
+    }
+
+    .expand-hint {
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+
     @media (max-width: 900px) {
       .cards {
         grid-template-columns: repeat(2, 1fr);
       }
 
-      .filters {
+      .filters,
+      .tester-grid,
+      .inline-row,
+      .detail-panel {
+        grid-template-columns: 1fr;
+      }
+
+      .preset-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .detail-meta {
         grid-template-columns: 1fr;
       }
     }
@@ -204,7 +347,77 @@
 <body>
   <div class="container">
     <h1>GateShield Dashboard</h1>
-    <div class="subtitle">Live view of gateway decisions and recent traffic.</div>
+    <div class="subtitle">Live view of gateway decisions, recent traffic, and interactive request testing.</div>
+
+    <div class="panel">
+      <h2>Request Tester</h2>
+
+      <div class="tester-grid">
+        <select id="methodInput" class="select">
+          <option value="POST">POST</option>
+          <option value="GET">GET</option>
+          <option value="PUT">PUT</option>
+          <option value="PATCH">PATCH</option>
+          <option value="DELETE">DELETE</option>
+        </select>
+
+        <input id="pathInput" class="input" type="text" value="/login" placeholder="/login" />
+
+        <input id="authInput" class="input" type="text" placeholder="Authorization header (optional)" />
+      </div>
+
+      <div class="checkbox-row">
+        <input id="jsonContentTypeCheckbox" type="checkbox" checked />
+        <label for="jsonContentTypeCheckbox">Send Content-Type: application/json</label>
+      </div>
+
+      <textarea id="bodyInput" class="textarea">{
+  "username": "pedro",
+  "password": "safe-password"
+}</textarea>
+
+      <div style="margin-top: 12px;">
+        <button id="sendBtn" class="button">Send Request Through GateShield</button>
+      </div>
+
+      <div class="preset-grid">
+        <button class="preset-btn" data-preset="safe-login">
+          <div class="preset-title">Safe Login</div>
+          <div class="muted">Normal JSON body to /login</div>
+        </button>
+
+        <button class="preset-btn" data-preset="sqli-login">
+          <div class="preset-title">SQL Injection Attempt</div>
+          <div class="muted">Classic ' OR 1=1 payload</div>
+        </button>
+
+        <button class="preset-btn" data-preset="oversized-search">
+          <div class="preset-title">Oversized Payload</div>
+          <div class="muted">Large JSON body to trigger size rule</div>
+        </button>
+
+        <button class="preset-btn" data-preset="missing-auth-sensitive">
+          <div class="preset-title">Missing Auth on Sensitive Path</div>
+          <div class="muted">POST /admin with no Authorization header</div>
+        </button>
+
+        <button class="preset-btn" data-preset="path-traversal">
+          <div class="preset-title">Path Traversal</div>
+          <div class="muted">Body contains ../../etc/passwd</div>
+        </button>
+        
+        <button class="preset-btn" data-preset="xss-comment">
+          <div class="preset-title">XSS Payload</div>
+          <div class="muted">Body contains a script tag</div>
+        </button>
+      </div>
+
+      <div class="response-box">
+        <div class="panel-title" style="margin-bottom:10px;">Last Test Response</div>
+        <div id="testerStatus" class="muted">No request sent yet.</div>
+        <pre id="testerResponse" class="code" style="margin-top:12px;">—</pre>
+      </div>
+    </div>
 
     <div class="filters">
       <select id="decisionFilter" class="select">
@@ -216,7 +429,7 @@
 
       <input id="pathFilter" class="input" type="text" placeholder="Filter by path, e.g. /login" />
 
-      <button id="refreshBtn" class="button">Refresh</button>
+      <button id="refreshBtn" class="button">Refresh Events</button>
     </div>
 
     <div class="cards">
@@ -240,7 +453,10 @@
 
     <div class="panel">
       <div class="panel-header">
-        <div class="panel-title">Recent Events</div>
+        <div>
+          <div class="panel-title">Recent Events</div>
+          <div class="expand-hint">Click a row to view full event details.</div>
+        </div>
         <div class="muted" id="resultsMeta">Loading...</div>
       </div>
 
@@ -278,6 +494,17 @@
     const pathFilter = document.getElementById("pathFilter");
     const refreshBtn = document.getElementById("refreshBtn");
 
+    const methodInput = document.getElementById("methodInput");
+    const pathInput = document.getElementById("pathInput");
+    const authInput = document.getElementById("authInput");
+    const bodyInput = document.getElementById("bodyInput");
+    const sendBtn = document.getElementById("sendBtn");
+    const testerStatus = document.getElementById("testerStatus");
+    const testerResponse = document.getElementById("testerResponse");
+    const jsonContentTypeCheckbox = document.getElementById("jsonContentTypeCheckbox");
+
+    const presetButtons = document.querySelectorAll("[data-preset]");
+
     function badgeClass(decision) {
       return `badge ${decision}`;
     }
@@ -295,6 +522,93 @@
       }
     }
 
+    function safeStringify(value) {
+      if (value === null || value === undefined) return "—";
+      try {
+        return JSON.stringify(value, null, 2);
+      } catch {
+        return String(value);
+      }
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function renderRuleMatches(ruleMatches) {
+      if (!ruleMatches || ruleMatches.length === 0) {
+        return `<div class="muted">No matched rules.</div>`;
+      }
+
+      return `
+        <ul class="rule-list">
+          ${ruleMatches.map(rule => `
+            <li>
+              <div class="rule-name">${escapeHtml(rule.rule)}</div>
+              <div class="muted">${escapeHtml(rule.reason || "No reason provided.")}</div>
+              <div class="muted">Score: ${escapeHtml(rule.score ?? "—")}</div>
+            </li>
+          `).join("")}
+        </ul>
+      `;
+    }
+
+    function buildDetailRow(event) {
+      return `
+        <tr class="detail-row">
+          <td colspan="6">
+            <div class="detail-panel">
+              <div class="detail-block">
+                <div class="detail-title">Event Metadata</div>
+                <div class="detail-meta">
+                  <div class="detail-meta-label">Event ID</div>
+                  <div class="code">${escapeHtml(event.event_id || "—")}</div>
+
+                  <div class="detail-meta-label">Timestamp</div>
+                  <div>${escapeHtml(event.timestamp || "—")}</div>
+
+                  <div class="detail-meta-label">Client Host</div>
+                  <div>${escapeHtml(event.client_host || "—")}</div>
+
+                  <div class="detail-meta-label">Content Type</div>
+                  <div>${escapeHtml(event.content_type || "—")}</div>
+
+                  <div class="detail-meta-label">Body Size</div>
+                  <div>${escapeHtml(event.body_size ?? "—")}</div>
+
+                  <div class="detail-meta-label">Has Auth Header</div>
+                  <div>${event.has_auth_header ? "true" : "false"}</div>
+
+                  <div class="detail-meta-label">Sensitive Endpoint</div>
+                  <div>${event.is_sensitive_endpoint ? "true" : "false"}</div>
+                </div>
+              </div>
+
+              <div class="detail-block">
+                <div class="detail-title">Matched Rules</div>
+                ${renderRuleMatches(event.rule_matches)}
+              </div>
+
+              <div class="detail-block">
+                <div class="detail-title">Query Params</div>
+                <pre class="code">${escapeHtml(safeStringify(event.query_params))}</pre>
+              </div>
+
+              <div class="detail-block">
+                <div class="detail-title">Parsed JSON Body</div>
+                <pre class="code">${escapeHtml(safeStringify(event.parsed_json))}</pre>
+              </div>
+            </div>
+          </td>
+        </tr>
+      `;
+    }
+
     function buildQuery() {
       const params = new URLSearchParams();
       const decision = decisionFilter.value.trim();
@@ -309,9 +623,7 @@
 
     async function loadEvents() {
       const query = buildQuery();
-      const url = `/events?${query}`;
-
-      const response = await fetch(url);
+      const response = await fetch(`/events?${query}`);
       const data = await response.json();
 
       totalCount.textContent = data.summary.total ?? 0;
@@ -331,16 +643,132 @@
       resultsMeta.textContent = `${data.events.length} result${data.events.length === 1 ? "" : "s"}`;
 
       for (const event of data.events) {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
+        const summaryRow = document.createElement("tr");
+        summaryRow.className = "clickable-row";
+        summaryRow.innerHTML = `
           <td class="muted">${formatTime(event.timestamp)}</td>
           <td><span class="${badgeClass(event.decision)}">${event.decision}</span></td>
-          <td class="code">${event.path}</td>
-          <td>${event.method}</td>
-          <td>${event.risk_score}</td>
-          <td class="code">${formatRules(event.rule_matches)}</td>
+          <td class="code">${escapeHtml(event.path)}</td>
+          <td>${escapeHtml(event.method)}</td>
+          <td>${escapeHtml(event.risk_score)}</td>
+          <td class="code">${escapeHtml(formatRules(event.rule_matches))}</td>
         `;
-        tableBody.appendChild(tr);
+
+        const detailContainer = document.createElement("tbody");
+        let expanded = false;
+
+        summaryRow.addEventListener("click", () => {
+          expanded = !expanded;
+          if (expanded) {
+            detailContainer.innerHTML = buildDetailRow(event);
+          } else {
+            detailContainer.innerHTML = "";
+          }
+        });
+
+        tableBody.appendChild(summaryRow);
+        tableBody.appendChild(detailContainer);
+      }
+    }
+
+    async function sendTestRequest() {
+      const method = methodInput.value;
+      const path = pathInput.value.trim() || "/login";
+      const bodyText = bodyInput.value.trim();
+
+      const headers = {};
+      const fetchOptions = { method, headers };
+
+      if (authInput.value.trim()) {
+        headers["Authorization"] = authInput.value.trim();
+      }
+
+      if (jsonContentTypeCheckbox.checked) {
+        headers["Content-Type"] = "application/json";
+      }
+
+      if (method !== "GET" && bodyText) {
+        fetchOptions.body = bodyText;
+      }
+
+      testerStatus.textContent = "Sending request...";
+      testerResponse.textContent = "—";
+
+      try {
+        const response = await fetch(path, fetchOptions);
+        const text = await response.text();
+
+        testerStatus.textContent = `HTTP ${response.status} ${response.ok ? "OK" : "Response received"}`;
+
+        try {
+          const parsed = JSON.parse(text);
+          testerResponse.textContent = JSON.stringify(parsed, null, 2);
+        } catch {
+          testerResponse.textContent = text || "No response body";
+        }
+
+        await loadEvents();
+      } catch (error) {
+        testerStatus.textContent = "Request failed";
+        testerResponse.textContent = String(error);
+      }
+    }
+
+    function applyPreset(name) {
+      authInput.value = "";
+      jsonContentTypeCheckbox.checked = true;
+
+      if (name === "safe-login") {
+        methodInput.value = "POST";
+        pathInput.value = "/login";
+        bodyInput.value = JSON.stringify({
+          username: "pedro",
+          password: "safe-password"
+        }, null, 2);
+      }
+
+      if (name === "sqli-login") {
+        methodInput.value = "POST";
+        pathInput.value = "/login";
+        bodyInput.value = JSON.stringify({
+          username: "admin",
+          password: "' OR 1=1 --"
+        }, null, 2);
+      }
+
+      if (name === "oversized-search") {
+        methodInput.value = "POST";
+        pathInput.value = "/search";
+        bodyInput.value = JSON.stringify({
+          query: "A".repeat(1500)
+        }, null, 2);
+        authInput.value = "Bearer demo-token";
+      }
+
+      if (name === "missing-auth-sensitive") {
+        methodInput.value = "POST";
+        pathInput.value = "/admin";
+        bodyInput.value = JSON.stringify({
+          action: "view-dashboard"
+        }, null, 2);
+      }
+
+      if (name === "path-traversal") {
+        methodInput.value = "POST";
+        pathInput.value = "/download";
+        bodyInput.value = JSON.stringify({
+          file: "../../etc/passwd"
+        }, null, 2);
+        authInput.value = "Bearer demo-token";
+      }
+
+      if (name === "xss-comment") {
+        methodInput.value = "POST";
+        pathInput.value = "/comment";
+        bodyInput.value = JSON.stringify({
+          comment: '<script>alert("xss")<\/script>'
+        }, null, 2);
+        authInput.value = "Bearer demo-token";
       }
     }
 
@@ -348,6 +776,14 @@
     decisionFilter.addEventListener("change", loadEvents);
     pathFilter.addEventListener("keydown", (e) => {
       if (e.key === "Enter") loadEvents();
+    });
+
+    sendBtn.addEventListener("click", sendTestRequest);
+
+    presetButtons.forEach(btn => {
+      btn.addEventListener("click", () => {
+        applyPreset(btn.dataset.preset);
+      });
     });
 
     loadEvents();
