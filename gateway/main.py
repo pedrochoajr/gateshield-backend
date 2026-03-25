@@ -3,6 +3,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
 from fastapi import FastAPI, Request, Response, Query
+import os
 import httpx
 import json
 import uuid
@@ -34,7 +35,10 @@ STATIC_DIR = Path(__file__).resolve().parent / "static"
 app = FastAPI(title="GateShield Gateway")
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
-PROTECTED_API_BASE = "http://127.0.0.1:8001"
+PROTECTED_API_BASE = os.getenv(
+    "PROTECTED_API_BASE",
+    "http://127.0.0.1:8001"  # fallback for local dev
+)
 
 init_db()
 
@@ -194,6 +198,7 @@ def dashboard():
 @app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
 async def proxy(path: str, request: Request):
     target_url = f"{PROTECTED_API_BASE}/{path}"
+    print("Forwarding to:", target_url)
     body = await request.body()
 
     inspection = await inspect_request(request, path, body)
